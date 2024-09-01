@@ -4,31 +4,34 @@ import styled from 'styled-components';
 const EntryContainer = styled.div`
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 120px);
-  padding: 20px;
+  height: 100%;
+  padding: 8px;
+  font-family: 'Arial', sans-serif;
 `;
 
 const ContentWrapper = styled.div`
-  flex-grow: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 `;
 
 const ExpenseTypeGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 6px;
+  margin-bottom: 12px;
 `;
 
 const ExpenseTypeButton = styled.button`
   background-color: ${props => props.theme.colors.primary};
   color: ${props => props.theme.colors.white};
   border: none;
-  padding: 10px;
-  border-radius: 5px;
+  padding: 6px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 11px;
   transition: background-color 0.3s;
 
   &:hover {
@@ -46,11 +49,11 @@ const AddNewButton = styled(ExpenseTypeButton)`
 
 const AmountDisplay = styled.div`
   width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
+  padding: 8px;
+  margin-bottom: 8px;
   border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 24px;
+  border-radius: 4px;
+  font-size: 20px;
   text-align: right;
   background-color: white;
   box-sizing: border-box;
@@ -59,17 +62,17 @@ const AmountDisplay = styled.div`
 const CalculatorGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 6px;
+  margin-bottom: 12px;
 `;
 
 const CalcButton = styled.button`
   background-color: #e0e0e0;
   color: #333;
   border: 1px solid #ccc;
-  padding: 15px;
-  font-size: 18px;
-  border-radius: 5px;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.3s;
 
@@ -84,42 +87,65 @@ const CalcButton = styled.button`
 
 const SubmitButton = styled(ExpenseTypeButton)`
   width: 100%;
-  padding: 15px;
+  padding: 12px;
+  font-size: 14px;
   opacity: ${props => props.disabled ? 0.5 : 1};
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
+  padding: 8px;
+  margin-bottom: 8px;
   border: 1px solid #ddd;
-  border-radius: 5px;
+  border-radius: 4px;
   box-sizing: border-box;
+  font-size: 12px;
 `;
 
 const CancelButton = styled(ExpenseTypeButton)`
   background-color: #e74c3c;
-  margin-top: 10px;
+  margin-top: 8px;
+`;
+
+const ButtonContainer = styled.div`
+  margin-top: auto;
+  padding-top: 8px;
+`;
+
+const RemoveButton = styled.button`
+  background-color: transparent;
+  color: #e74c3c;
+  border: none;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px;
+  margin-left: 4px;
+
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 interface MobileExpenseEntryProps {
   expenseTypes: string[];
   onSubmit: (expense: { expenseType: string; amount: number; details?: string }) => void;
   onAddExpenseType: (expenseType: string) => void;
+  onRemoveExpenseType: (expenseType: string) => void;
 }
 
 const MobileExpenseEntry: React.FC<MobileExpenseEntryProps> = ({
   expenseTypes,
   onSubmit,
-  onAddExpenseType
+  onAddExpenseType,
+  onRemoveExpenseType
 }) => {
-  const [selectedType, setSelectedType] = useState('');
-  const [amount, setAmount] = useState('0');
-  const [newExpenseType, setNewExpenseType] = useState('');
-  const [isAddingNew, setIsAddingNew] = useState(false);
-  const [showOthersInput, setShowOthersInput] = useState(false);
-  const [othersDetails, setOthersDetails] = useState('');
+  const [selectedType, setSelectedType] = useState<string>('');
+  const [amount, setAmount] = useState<string>('0');
+  const [newExpenseType, setNewExpenseType] = useState<string>('');
+  const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
+  const [showOthersInput, setShowOthersInput] = useState<boolean>(false);
+  const [othersDetails, setOthersDetails] = useState<string>('');
 
   const handleNumberInput = (num: string) => {
     setAmount(prev => {
@@ -143,11 +169,14 @@ const MobileExpenseEntry: React.FC<MobileExpenseEntryProps> = ({
 
   const handleSubmit = () => {
     if (selectedType && amount !== '0') {
-      onSubmit({
+      const expenseData: { expenseType: string; amount: number; details?: string } = {
         expenseType: selectedType,
         amount: parseFloat(amount),
-        details: showOthersInput ? othersDetails : undefined
-      });
+      };
+      if (showOthersInput && othersDetails.trim() !== '') {
+        expenseData.details = othersDetails.trim();
+      }
+      onSubmit(expenseData);
       setSelectedType('');
       setAmount('0');
       setShowOthersInput(false);
@@ -170,6 +199,15 @@ const MobileExpenseEntry: React.FC<MobileExpenseEntryProps> = ({
     setNewExpenseType('');
   };
 
+  const handleRemoveExpenseType = (type: string) => {
+    if (window.confirm(`Are you sure you want to remove "${type}" expense type?`)) {
+      onRemoveExpenseType(type);
+      if (selectedType === type) {
+        setSelectedType('');
+      }
+    }
+  };
+
   return (
     <EntryContainer>
       <ContentWrapper>
@@ -181,6 +219,7 @@ const MobileExpenseEntry: React.FC<MobileExpenseEntryProps> = ({
               style={selectedType === type ? { backgroundColor: '#2ecc71' } : {}}
             >
               {type}
+              <RemoveButton onClick={(e) => { e.stopPropagation(); handleRemoveExpenseType(type); }}>×</RemoveButton>
             </ExpenseTypeButton>
           ))}
           <AddNewButton onClick={handleAddNewType}>
@@ -225,12 +264,14 @@ const MobileExpenseEntry: React.FC<MobileExpenseEntryProps> = ({
           ))}
         </CalculatorGrid>
       </ContentWrapper>
-      <SubmitButton 
-        onClick={handleSubmit} 
-        disabled={!selectedType || amount === '0'}
-      >
-        Add Expense
-      </SubmitButton>
+      <ButtonContainer>
+        <SubmitButton 
+          onClick={handleSubmit} 
+          disabled={!selectedType || amount === '0'}
+        >
+          Add Expense
+        </SubmitButton>
+      </ButtonContainer>
     </EntryContainer>
   );
 };

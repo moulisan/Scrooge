@@ -11,7 +11,6 @@ import GlobalStyle from './globalStyles';
 import ErrorBoundary from './ErrorBoundary';
 import { Menu, X } from 'lucide-react';
 
-
 const theme = {
   colors: {
     primary: '#3498db',
@@ -21,7 +20,7 @@ const theme = {
     white: '#ffffff',
   },
   fonts: {
-    main: "'Roboto', sans-serif",
+    main: "'Arial', sans-serif",
   },
 };
 
@@ -47,7 +46,7 @@ const AppWrapper = styled.div`
 const Header = styled.header`
   background-color: ${props => props.theme.colors.primary};
   color: ${props => props.theme.colors.white};
-  padding: 20px;
+  padding: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -56,7 +55,7 @@ const Header = styled.header`
 
 const Logo = styled.h1`
   margin: 0;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: bold;
   text-align: center;
   flex-grow: 1;
@@ -66,7 +65,7 @@ const MenuButton = styled.button`
   background: none;
   border: none;
   color: ${props => props.theme.colors.white};
-  font-size: 24px;
+  font-size: 20px;
   cursor: pointer;
 `;
 
@@ -78,40 +77,50 @@ const MenuOverlay = styled.div`
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  z-index: 1000;
 `;
 
 const MenuContent = styled.div`
   background-color: ${props => props.theme.colors.white};
   width: 70%;
-  max-width: 300px;
+  max-width: 250px;
   height: 100%;
   padding: 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
 `;
 
 const MenuItem = styled.button`
   background: none;
   border: none;
   color: ${props => props.theme.colors.primary};
-  font-size: 18px;
+  font-size: 16px;
   padding: 10px;
   width: 100%;
   text-align: left;
   cursor: pointer;
+  margin-bottom: 10px;
 
   &:hover {
     background-color: ${props => props.theme.colors.background};
   }
 `;
 
+const CloseButton = styled(MenuButton)`
+  align-self: flex-end;
+  margin-bottom: 20px;
+`;
+
 const ToggleButton = styled.button`
   background-color: ${props => props.theme.colors.secondary};
   color: ${props => props.theme.colors.white};
   border: none;
-  padding: 10px 15px;
-  margin: 10px 20px;
-  border-radius: 5px;
-  font-size: 16px;
+  padding: 8px 12px;
+  margin: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
   cursor: pointer;
   transition: background-color 0.3s;
 
@@ -121,7 +130,7 @@ const ToggleButton = styled.button`
 `;
 
 const ExportButton = styled(ToggleButton)`
-  margin-top: 20px;
+  margin-top: 16px;
 `;
 
 interface Expense {
@@ -167,14 +176,29 @@ const App: React.FC = () => {
 
   const handleAddExpense = async (expense: Omit<Expense, 'id' | 'date' | 'userId'>) => {
     if (!user) return;
-    const docRef = await addDoc(collection(db, 'expenses'), {
-      ...expense,
-      date: new Date(),
-      userId: user.uid
-    });
-    const newExpense = { ...expense, id: docRef.id, date: new Date(), userId: user.uid };
-    setExpenses([newExpense, ...expenses]);
-    showToastMessage("Expense added successfully!");
+    try {
+      const expenseData: Partial<Expense> = {
+        ...expense,
+        date: new Date(),
+        userId: user.uid
+      };
+      
+      // Remove undefined values
+      Object.keys(expenseData).forEach((key) => {
+        if (expenseData[key as keyof Expense] === undefined) {
+          delete expenseData[key as keyof Expense];
+        }
+      });
+      
+      const docRef = await addDoc(collection(db, 'expenses'), expenseData);
+      const newExpense = { ...expenseData, id: docRef.id } as Expense;
+      setExpenses([newExpense, ...expenses]);
+      showToastMessage("Expense added successfully!");
+      console.log('Expense added to database:', newExpense);
+    } catch (error) {
+      console.error("Error adding expense: ", error);
+      showToastMessage("Error adding expense. Please try again.");
+    }
   };
 
   const handleEditExpense = async (updatedExpense: Expense) => {
@@ -199,6 +223,10 @@ const App: React.FC = () => {
 
   const handleAddExpenseType = (newExpenseType: string) => {
     setExpenseTypes([...expenseTypes, newExpenseType]);
+  };
+
+  const handleRemoveExpenseType = (typeToRemove: string) => {
+    setExpenseTypes(expenseTypes.filter(type => type !== typeToRemove));
   };
 
   const handleLogout = () => {
@@ -273,18 +301,18 @@ const App: React.FC = () => {
         ) : (
           <AppWrapper>
             <Header>
-              <MenuButton onClick={() => setMenuOpen(true)}><Menu /></MenuButton>
+              <MenuButton onClick={() => setMenuOpen(true)}><Menu size={20} /></MenuButton>
               <Logo>Scrooge</Logo>
             </Header>
             {menuOpen && (
               <MenuOverlay onClick={() => setMenuOpen(false)}>
                 <MenuContent onClick={e => e.stopPropagation()}>
-                  <MenuButton onClick={() => setMenuOpen(false)} style={{float: 'right'}}><X /></MenuButton>
+                  <CloseButton onClick={() => setMenuOpen(false)}><X size={20} /></CloseButton>
                   <MenuItem>{user.email}</MenuItem>
-                  <MenuItem onClick={handleLogout}>Logout</MenuItem>
-                </MenuContent>
-              </MenuOverlay>
-            )}
+      <MenuItem onClick={handleLogout}>Logout</MenuItem>
+    </MenuContent>
+  </MenuOverlay>
+)}
             <ToggleButton onClick={() => setShowList(!showList)}>
               {showList ? 'Add Expense' : 'View Expenses'}
             </ToggleButton>
@@ -302,6 +330,7 @@ const App: React.FC = () => {
                 expenseTypes={expenseTypes}
                 onSubmit={handleAddExpense}
                 onAddExpenseType={handleAddExpenseType}
+                onRemoveExpenseType={handleRemoveExpenseType}
               />
             )}
             {showToast && <Toast message={toastMessage} />}
